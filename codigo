@@ -1,0 +1,159 @@
+import pandas as pd
+import ast
+
+# Criar uma função para verificar se o primeiro gol foi marcado no primeiro tempo
+def first_goal_first_half(home_goals, away_goals):
+    home_goals = ast.literal_eval(home_goals) if home_goals else []
+    away_goals = ast.literal_eval(away_goals) if away_goals else []
+
+    # Função para verificar se um gol ocorreu no primeiro tempo
+    def is_first_half(goal):
+        if '+' in goal:
+            minute, extra = map(int, goal.strip('+-').split('+'))
+            return minute <= 45 or (minute > 45 and extra <= 45)
+        else:
+            return int(goal) <= 45
+
+    # Verificar se há gols marcados para ambas as equipes
+    if home_goals and away_goals:
+        # Verificar se o primeiro gol foi marcado no primeiro tempo
+        return any(is_first_half(goal) for goal in home_goals + away_goals)
+    # Se uma das equipes não marcou gols, considerar o jogo como não aplicável
+    return False
+
+# Função para obter o time que fez o primeiro gol
+def get_first_goal_team(row):
+    home_goals = ast.literal_eval(row['Goals_H_Minutes']) if row['Goals_H_Minutes'] else []
+    away_goals = ast.literal_eval(row['Goals_A_Minutes']) if row['Goals_A_Minutes'] else []
+
+    if home_goals and away_goals:
+        all_goals = home_goals + away_goals
+        for goal in all_goals:
+            if '+' in goal:
+                minute, extra = map(int, goal.strip('+-').split('+'))
+                if minute <= 45 or (minute > 45 and extra <= 45):
+                    return row['Home']
+            else:
+                if int(goal) <= 45:
+                    return row['Home'] if goal in home_goals else row['Away']
+    return None
+
+# Função para calcular os pontos com base nas condições dadas
+def calculate_points(row):
+    if row['First_Goal_First_Half']:
+        if row['First_Goal_Team'] == row['Home']:
+            return 3
+        else:
+            return 1
+    else:
+        return 0
+
+# Carregar os dados do Excel
+url = "https://github.com/futpythontrader/YouTube/raw/main/Bases_de_Dados_(2022-2024)/Italy%20Serie%20A_20232024.xlsx"
+df = pd.read_excel(url)
+
+# Aplicar a função para cada linha do DataFrame
+df['First_Goal_First_Half'] = df.apply(lambda row: first_goal_first_half(row['Goals_H_Minutes'], row['Goals_A_Minutes']), axis=1)
+
+# Filtrar os jogos onde o primeiro gol foi marcado no primeiro tempo
+first_half_goal_games = df[df['First_Goal_First_Half']]
+
+# Obter o time que fez o primeiro gol no primeiro tempo
+first_goal_teams = first_half_goal_games.apply(get_first_goal_team, axis=1)
+
+# Adicionar a informação ao DataFrame
+first_half_goal_games['First_Goal_Team'] = first_goal_teams
+
+# Adicionar colunas indicando se o time que fez o primeiro gol estava jogando em casa ou fora
+first_half_goal_games['First_Goal_At_Home'] = first_half_goal_games['First_Goal_Team'] == first_half_goal_games['Home']
+first_half_goal_games['First_Goal_At_Away'] = ~first_half_goal_games['First_Goal_At_Home']
+
+# Calcular os pontos com base nas condições dadas para jogos em casa e fora
+first_half_goal_games['Points_At_Home'] = first_half_goal_games.apply(lambda row: 3 if row['First_Goal_At_Home'] else (1 if row['First_Goal_At_Away'] else 0), axis=1)
+first_half_goal_games['Points_At_Away'] = first_half_goal_games.apply(lambda row: 3 if row['First_Goal_At_Away'] else (1 if row['First_Goal_At_Home'] else 0), axis=1)
+
+# Exibir os resultados
+print("Pontuações dos jogos no primeiro tempo:")
+print(first_half_goal_games[['Home', 'Away', 'First_Goal_First_Half', 'First_Goal_Team', 'First_Goal_At_Home', 'First_Goal_At_Away', 'Points_At_Home', 'Points_At_Away']])
+
+# Criar rankings separados para jogos em casa e fora
+ranking_home = first_half_goal_games.groupby('Home')['Points_At_Home'].sum().sort_values(ascending=False).reset_index()
+ranking_away = first_half_goal_games.groupby('Away')['Points_At_Away'].sum().sort_values(ascending=False).reset_index()
+
+# Exibir os rankings
+print("Ranking de times jogando em casa:")
+print(ranking_home)
+
+print("\nRanking de times jogando fora:")
+print(ranking_away)
+
+# Calcular o número total de jogos em casa para cada time
+total_home_games = df['Home'].value_counts()
+
+# Calcular o número de vezes que cada time foi o primeiro a marcar em casa
+first_goal_home_count = first_half_goal_games[first_half_goal_games['Points_At_Home'] > 0]['Home'].value_counts()
+
+# Calcular a porcentagem de vezes que cada time foi o primeiro a marcar em casa
+percentage_first_goal_home = (first_goal_home_count / total_home_games * 100).fillna(0)
+
+# Calcular o número total de jogos fora para cada time
+total_away_games = df['Away'].value_counts()
+
+# Calcular o número de vezes que cada time foi o primeiro a marcar fora
+first_goal_away_count = first_half_goal_games[first_half_goal_games['Points_At_Away'] > 0]['Away'].value_counts()
+
+# Calcular a porcentagem de vezes que cada time foi o primeiro a marcar fora
+percentage_first_goal_away = (first_goal_away_count / total_away_games * 100).fillna(0)
+
+# Exibir as porcentagens
+print("Porcentagem de vezes que cada time foi o primeiro a marcar em casa:")
+print(percentage_first_goal_home.sort_values(ascending=False))
+
+print("\nPorcentagem de vezes que cada time foi o primeiro a marcar fora:")
+print(percentage_first_goal_away.sort_values(ascending=False))
+
+# Calcular os pontos com base nas condições dadas para jogos em casa e fora
+first_half_goal_games['Points_At_Home'] = first_half_goal_games.apply(lambda row: 3 if row['First_Goal_At_Home'] else (1 if row['First_Goal_At_Away'] else 0), axis=1)
+first_half_goal_games['Points_At_Away'] = first_half_goal_games.apply(lambda row: 3 if row['First_Goal_At_Away'] else (1 if row['First_Goal_At_Home'] else 0), axis=1)
+
+# Exibir os resultados
+print("Pontuações dos jogos no primeiro tempo:")
+print(first_half_goal_games[['Home', 'Away', 'First_Goal_First_Half', 'First_Goal_Team', 'First_Goal_At_Home', 'First_Goal_At_Away', 'Points_At_Home', 'Points_At_Away']])
+
+# Criar rankings separados para jogos em casa e fora
+ranking_home = first_half_goal_games.groupby('Home')['Points_At_Home'].sum().sort_values(ascending=False).reset_index()
+ranking_away = first_half_goal_games.groupby('Away')['Points_At_Away'].sum().sort_values(ascending=False).reset_index()
+
+# Exibir os rankings
+print("\nRanking de times jogando em casa:")
+print(ranking_home)
+
+print("\nRanking de times jogando fora:")
+print(ranking_away)
+
+# Adicionar colunas indicando se o time que fez o primeiro gol estava jogando em casa ou fora
+first_half_goal_games['First_Goal_At_Home'] = first_half_goal_games['First_Goal_Team'] == first_half_goal_games['Home']
+first_half_goal_games['First_Goal_At_Away'] = ~first_half_goal_games['First_Goal_At_Home']
+
+# Calcular os pontos com base nas condições dadas para jogos em casa e fora
+first_half_goal_games['Points_At_Home'] = first_half_goal_games['First_Goal_At_Home'].astype(int) * 3
+first_half_goal_games['Points_At_Away'] = first_half_goal_games['First_Goal_At_Away'].astype(int) * 3
+
+# Criar rankings separados para jogos em casa e fora
+ranking_home = first_half_goal_games.groupby('Home')['Points_At_Home'].sum().sort_values(ascending=False).reset_index()
+ranking_away = first_half_goal_games.groupby('Away')['Points_At_Away'].sum().sort_values(ascending=False).reset_index()
+
+# Exibir os rankings
+print("Ranking de times jogando em casa:")
+print(ranking_home)
+
+print("\nRanking de times jogando fora:")
+print(ranking_away)
+
+# Adicionar a coluna 'Cumulative_Points_Last_5_Rounds' com a soma cumulativa dos pontos nas últimas 5 rodadas
+df['Cumulative_Points_Last_5_Rounds_Home'] = df.groupby('Home')['Points_At_Home'].apply(lambda x: x.shift().rolling(5, min_periods=1).sum())
+df['Cumulative_Points_Last_5_Rounds_Away'] = df.groupby('Away')['Points_At_Away'].apply(lambda x: x.shift().rolling(5, min_periods=1).sum())
+
+# Exibir os resultados com a soma cumulativa dos pontos nas últimas 5 rodadas
+print("\nSoma Cumulativa dos Pontos nas Últimas 5 Rodadas:")
+print(df[['Rodada', 'Home', 'Away', 'Points_At_Home', 'Points_At_Away', 'Cumulative_Points_Last_5_Rounds_Home', 'Cumulative_Points_Last_5_Rounds_Away']])
