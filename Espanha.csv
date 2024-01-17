@@ -1,24 +1,7 @@
-Date,Home,Away,,,,
-1,Alaves,Cadiz,,,,
-2,Vallecano,Las Palmas,,,,
-3,Villareal,Mallorca,,,,
-4,Osasuna,Getafe,,,,Alaves
-5,Real Madrid,Almeria,,,,Almeria
-6,Girona,Sevilla,,,,Ath Bilbao
-,,,,,,Ath Madrid
-,,,,,,Barcelona
-,,,,,,Betis
-,,,,,,Cadiz
-,,,,,,Celta
-,,,,,,Getafe
-,,,,,,Girona
-,,,,,,Granada
-,,,,,,Las Palmas
-,,,,,,Mallorca
-,,,,,,Osasuna
-,,,,,,Real Madrid
-,,,,,,Sevilla
-,,,,,,Sociedad
-,,,,,,Valencia
-,,,,,,Vallecano
-,,,,,,Villarreal
+Date,Home,Away
+1,Alaves,Cadiz
+2,Vallecano,Las Palmas
+3,Villareal,Mallorca
+4,Osasuna,Getafe
+5,Real Madrid,Almeria
+6,Girona,Sevilla
