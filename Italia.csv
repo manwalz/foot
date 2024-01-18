@@ -1,181 +1,180 @@
 Date,Home,Away
 1,Roma,Verona
-2,Udinese,AC Milan
-3,Frosinone,Cagliari
-4,Empoli,Monza
-5,Salernitana,Genoa
-6,Lecce,Juventus
-7,Cagliari,Torino
-8,Atalanta,Udinese
-9,Juventus,Empoli
-10,AC Milan,Bologna
-11,Genoa,Lecce
-12,Monza,Sassuolo
-13,Verona,Frosinone
-14,Lazio,Napoli
-15,Fiorentina,Inter
-16,Salernitana,Roma
-17,Lecce,Fiorentina
-18,Udinese,Monza
-19,Empoli,Genoa
-20,Frosinone,AC Milan
-21,Bologna,Sassuolo
-22,Torino,Salernitana
-23,Napoli,Verona
-24,Atalanta,Lazio
-25,Inter,Juventus
-26,Roma,Cagliari
-27,Salernitana,Empoli
-28,Cagliari,Lazio
-29,Roma,Inter
-30,Sassuolo,Torino
-31,Fiorentina,Frosinone
-32,Bologna,Lecce
-33,Monza,Verona
-34,Genoa,Atalanta
-35,AC Milan,Napoli
-36,Juventus,Udinese
-37,Bologna,Fiorentina
-38,Torino,Lecce
-39,Inter,Salernitana
-40,Napoli,Genoa
-41,Verona,Juventus
-42,Atalanta,Sassuolo
-43,Lazio,Bologna
-44,Empoli,Fiorentina
-45,Udinese,Cagliari
-46,Frosinone,Roma
-47,Monza,AC Milan
-48,Torino,Lazio
-49,Bologna,Verona
-50,Sassuolo,Empoli
-51,Salernitana,Monza
-52,Genoa,Udinese
-53,Juventus,Frosinone
-54,Cagliari,Napoli
-55,Lecce,Inter
-56,AC Milan,Atalanta
-57,Roma,Torino
-58,Fiorentina,Lazio
-59,Sassuolo,Napoli
-60,Inter,Atalanta
-61,Lazio,AC Milan
-62,Udinese,Salernitana
-63,Monza,Roma
-64,Torino,Fiorentina
-65,Verona,Sassuolo
-66,Frosinone,Lecce
-67,Empoli,Cagliari
-68,Atalanta,Bologna
-69,Napoli,Juventus
-70,Inter,Genoa
-71,AC Milan,Empoli
-72,Fiorentina,Roma
-73,Cagliari,Salernitana
-74,Napoli,Torino
-75,Juventus,Atalanta
-76,Lazio,Udinese
-77,Lecce,Verona
-78,Bologna,Inter
-79,Sassuolo,Frosinone
-80,Genoa,Monza
-81,Empoli,Bologna
-82,Inter,Napoli
-83,Juventus,Genoa
-84,Salernitana,Lecce
-85,Udinese,Torino
-86,Verona,AC Milan
-87,Frosinone,Lazio
-88,Roma,Sassuolo
-89,Atalanta,Fiorentina
-90,Monza,Cagliari
-91,Lazio,Juventus
-92,Napoli,Atalanta
-93,Inter,Empoli
-94,Genoa,Frosinone
-95,Torino,Monza
-96,Fiorentina,AC Milan
-97,Bologna,Salernitana
-98,Lecce,Roma
-99,Sassuolo,Udinese
-100,Cagliari,Verona
-101,Salernitana,Sassuolo
-102,Udinese,Inter
-103,Juventus,Fiorentina
-104,Cagliari,Atalanta
-105,AC Milan,Lecce
-106,Empoli,Torino
-107,Monza,Napoli
-108,Frosinone,Bologna
-109,Verona,Genoa
-110,Roma,Lazio
-111,Napoli,Frosinone
-112,Lazio,Salernitana
-113,Sassuolo,AC Milan
-114,Atalanta,Verona
-115,Inter,Cagliari
-116,Bologna,Monza
-117,Udinese,Roma
-118,Torino,Juventus
-119,Lecce,Empoli
-120,Fiorentina,Genoa
-121,Empoli,Napoli
-122,Roma,Bologna
-123,Monza,Atalanta
-124,Cagliari,Juventus
-125,Genoa,Lazio
-126,Sassuolo,Lecce
-127,Verona,Udinese
-128,Torino,Frosinone
-129,AC Milan,Inter
-130,Salernitana,Fiorentina
-131,Juventus,AC Milan
-132,Lecce,Monza
-133,Genoa,Cagliari
-134,Frosinone,Salernitana
-135,Atalanta,Empoli
-136,Napoli,Roma
-137,Lazio,Verona
-138,Fiorentina,Sassuolo
-139,Inter,Torino
-140,Bologna,Udinese
-141,Udinese,Napoli
-142,Cagliari,Lecce
-143,Monza,Lazio
-144,Salernitana,Atalanta
-145,Empoli,Frosinone
-146,AC Milan,Genoa
-147,Torino,Bologna
-148,Sassuolo,Inter
-149,Roma,Juventus
-150,Verona,Fiorentina
-151,Fiorentina,Monza
-152,Genoa,Sassuolo
-153,Lecce,Udinese
-154,Frosinone,Inter
-155,Juventus,Salernitana
-156,Atalanta,Roma
-157,Verona,Torino
-158,AC Milan,Cagliari
-159,Lazio,Empoli
-160,Napoli,Bologna
-161,Roma,Genoa
-162,Salernitana,Verona
-163,Torino,AC Milan
-164,Monza,Frosinone
-165,Fiorentina,Napoli
-166,Udinese,Empoli
-167,Inter,Lazio
-168,Lecce,Atalanta
-169,Bologna,Juventus
-170,Sassuolo,Cagliari
-171,Genoa,Bologna
-172,Lazio,Sassuolo
-173,Empoli,Roma
-174,Frosinone,Udinese
-175,Cagliari,Fiorentina
-176,AC Milan,Salernitana
-177,Atalanta,Torino
-178,Juventus,Monza
-179,Napoli,Lecce
-180,Verona,Inter
+2,Frosinone,Cagliari
+3,Empoli,Monza
+4,Salernitana,Genoa
+5,Lecce,Juventus
+6,Cagliari,Torino
+7,Atalanta,Udinese
+8,Juventus,Empoli
+9,AC Milan,Bologna
+10,Genoa,Lecce
+11,Monza,Sassuolo
+12,Verona,Frosinone
+13,Lazio,Napoli
+14,Fiorentina,Inter
+15,Salernitana,Roma
+16,Lecce,Fiorentina
+17,Udinese,Monza
+18,Empoli,Genoa
+19,Frosinone,AC Milan
+20,Bologna,Sassuolo
+21,Torino,Salernitana
+22,Napoli,Verona
+23,Atalanta,Lazio
+24,Inter,Juventus
+25,Roma,Cagliari
+26,Salernitana,Empoli
+27,Cagliari,Lazio
+28,Roma,Inter
+29,Sassuolo,Torino
+30,Fiorentina,Frosinone
+31,Bologna,Lecce
+32,Monza,Verona
+33,Genoa,Atalanta
+34,AC Milan,Napoli
+35,Juventus,Udinese
+36,Bologna,Fiorentina
+37,Torino,Lecce
+38,Inter,Salernitana
+39,Napoli,Genoa
+40,Verona,Juventus
+41,Atalanta,Sassuolo
+42,Lazio,Bologna
+43,Empoli,Fiorentina
+44,Udinese,Cagliari
+45,Frosinone,Roma
+46,Monza,AC Milan
+47,Torino,Lazio
+48,Bologna,Verona
+49,Sassuolo,Empoli
+50,Salernitana,Monza
+51,Genoa,Udinese
+52,Juventus,Frosinone
+53,Cagliari,Napoli
+54,Lecce,Inter
+55,AC Milan,Atalanta
+56,Roma,Torino
+57,Fiorentina,Lazio
+58,Sassuolo,Napoli
+59,Inter,Atalanta
+60,Lazio,AC Milan
+61,Udinese,Salernitana
+62,Monza,Roma
+63,Torino,Fiorentina
+64,Verona,Sassuolo
+65,Frosinone,Lecce
+66,Empoli,Cagliari
+67,Atalanta,Bologna
+68,Napoli,Juventus
+69,Inter,Genoa
+70,AC Milan,Empoli
+71,Fiorentina,Roma
+72,Cagliari,Salernitana
+73,Napoli,Torino
+74,Juventus,Atalanta
+75,Lazio,Udinese
+76,Lecce,Verona
+77,Bologna,Inter
+78,Sassuolo,Frosinone
+79,Genoa,Monza
+80,Empoli,Bologna
+81,Inter,Napoli
+82,Juventus,Genoa
+83,Salernitana,Lecce
+84,Udinese,Torino
+85,Verona,AC Milan
+86,Frosinone,Lazio
+87,Roma,Sassuolo
+88,Atalanta,Fiorentina
+89,Monza,Cagliari
+90,Lazio,Juventus
+91,Napoli,Atalanta
+92,Inter,Empoli
+93,Genoa,Frosinone
+94,Torino,Monza
+95,Fiorentina,AC Milan
+96,Bologna,Salernitana
+97,Lecce,Roma
+98,Sassuolo,Udinese
+99,Cagliari,Verona
+100,Salernitana,Sassuolo
+101,Udinese,Inter
+102,Juventus,Fiorentina
+103,Cagliari,Atalanta
+104,AC Milan,Lecce
+105,Empoli,Torino
+106,Monza,Napoli
+107,Frosinone,Bologna
+108,Verona,Genoa
+109,Roma,Lazio
+110,Napoli,Frosinone
+111,Lazio,Salernitana
+112,Sassuolo,AC Milan
+113,Atalanta,Verona
+114,Inter,Cagliari
+115,Bologna,Monza
+116,Udinese,Roma
+117,Torino,Juventus
+118,Lecce,Empoli
+119,Fiorentina,Genoa
+120,Empoli,Napoli
+121,Roma,Bologna
+122,Monza,Atalanta
+123,Cagliari,Juventus
+124,Genoa,Lazio
+125,Sassuolo,Lecce
+126,Verona,Udinese
+127,Torino,Frosinone
+128,AC Milan,Inter
+129,Salernitana,Fiorentina
+130,Juventus,AC Milan
+131,Lecce,Monza
+132,Genoa,Cagliari
+133,Frosinone,Salernitana
+134,Atalanta,Empoli
+135,Napoli,Roma
+136,Lazio,Verona
+137,Fiorentina,Sassuolo
+138,Inter,Torino
+139,Bologna,Udinese
+140,Udinese,Napoli
+141,Cagliari,Lecce
+142,Monza,Lazio
+143,Salernitana,Atalanta
+144,Empoli,Frosinone
+145,AC Milan,Genoa
+146,Torino,Bologna
+147,Sassuolo,Inter
+148,Roma,Juventus
+149,Verona,Fiorentina
+150,Fiorentina,Monza
+151,Genoa,Sassuolo
+152,Lecce,Udinese
+153,Frosinone,Inter
+154,Juventus,Salernitana
+155,Atalanta,Roma
+156,Verona,Torino
+157,AC Milan,Cagliari
+158,Lazio,Empoli
+159,Napoli,Bologna
+160,Roma,Genoa
+161,Salernitana,Verona
+162,Torino,AC Milan
+163,Monza,Frosinone
+164,Fiorentina,Napoli
+165,Udinese,Empoli
+166,Inter,Lazio
+167,Lecce,Atalanta
+168,Bologna,Juventus
+169,Sassuolo,Cagliari
+170,Genoa,Bologna
+171,Lazio,Sassuolo
+172,Empoli,Roma
+173,Frosinone,Udinese
+174,Cagliari,Fiorentina
+175,AC Milan,Salernitana
+176,Atalanta,Torino
+177,Juventus,Monza
+178,Napoli,Lecce
+179,Verona,Inter
