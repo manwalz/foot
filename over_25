@@ -1,0 +1,1245 @@
+# Importar todas as bibliotecas necessárias
+import pandas as pd  # Para manipulação de dados
+import numpy as np   # Para operações numéricas
+from sklearn.ensemble import RandomForestClassifier  # Modelo de machine learning
+from sklearn.model_selection import train_test_split  # Divisão dos dados em treino e teste
+from sklearn.metrics import accuracy_score, classification_report  # Métricas de avaliação
+
+# Bloco 1
+import pandas as pd
+
+# 1. Carregar os dados históricos
+url_2006_2021 = "https://github.com/futpythontrader/YouTube/raw/refs/heads/main/Bases_de_Dados/FootyStats/Base_de_Dados_FootyStats_(2006_2021).csv"
+url_2022_2024 = "https://github.com/futpythontrader/YouTube/raw/refs/heads/main/Bases_de_Dados/FootyStats/Base_de_Dados_FootyStats_(2022_2024).csv"
+
+dados_2006_2021 = pd.read_csv(url_2006_2021, encoding='utf-8')
+dados_2022_2024 = pd.read_csv(url_2022_2024, encoding='utf-8')
+
+# 2. Juntar as bases de dados históricos
+dados_total = pd.concat([dados_2006_2021, dados_2022_2024], ignore_index=True)
+
+# Função para processar a coluna 'season'
+def processar_season(valor):
+    if isinstance(valor, str) and '/' in valor:  # Se for string no formato '2024/2025'
+        return int(valor.split('/')[1])  # Extrai o ano final
+    elif isinstance(valor, str):  # Se for string no formato '2025'
+        return int(valor)  # Converte para inteiro
+    else:
+        raise ValueError(f"Formato inesperado em 'season': {valor}")
+
+# Verificar se a coluna 'Season' está no formato esperado
+if dados_total['Season'].apply(lambda x: isinstance(x, str) and ('/' in x or x.isdigit())).all():
+    dados_total['Season'] = dados_total['Season'].apply(processar_season)
+else:
+    raise ValueError("A coluna 'Season' contém valores em um formato inesperado.")
+
+# 3. Carregar os dados dos jogos futuros
+url_jogos_futuros = "https://github.com/futpythontrader/YouTube/raw/refs/heads/main/Jogos_do_Dia/FootyStats/Jogos_do_Dia_FootyStats_2025-01-18.csv"
+jogos_futuros = pd.read_csv(url_jogos_futuros, encoding='utf-8')
+
+# Verificar dados faltantes
+print("Dados faltantes nos jogos futuros:")
+print(jogos_futuros.isnull().sum())
+
+# 4. Identificar os países presentes nos jogos futuros
+paises = list(jogos_futuros['League'].unique())
+
+print("Países presentes nos jogos futuros:", paises)
+
+# Bloco 2
+# Dicionário para armazenar os DataFrames de cada país
+dados_por_paises = {}
+
+# Verificar países válidos (presentes na base de dados históricos)
+paises_validos = [pais for pais in paises if pais in dados_total['League'].unique()]
+
+# Iterar sobre cada país válido
+print(f"Processando dados para {len(paises_validos)} países...")
+for pais in paises_validos:
+    print(f"Filtrando dados para o país: {pais}")
+    
+    # Filtrar os dados históricos para o país atual
+    dados_filtrados = dados_total[dados_total['League'] == pais].copy()  # Usamos .copy() para evitar warnings
+    
+    # Garantir que os jogos futuros tenham as mesmas colunas que os dados históricos
+    jogos_futuros = jogos_futuros.reindex(columns=dados_filtrados.columns, fill_value=pd.NA)
+    
+    # Armazenar o DataFrame no dicionário
+    dados_por_paises[pais] = dados_filtrados
+
+
+print("Processamento concluído!")
+
+# Bloco 3
+print(jogos_futuros.to_string())
+
+# BLoco 4
+import pandas as pd
+import numpy as np
+
+# Função para definir o resultado no tempo integral (FT)
+def definir_resultado_ft(row):
+    """
+    Define o resultado no tempo integral com base nos gols marcados.
+    Retorna:
+    - 0: Empate
+    - 1: Vitória do Mandante
+    - 2: Vitória do Visitante
+    - NaN: Se os valores de Goals_H_FT ou Goals_A_FT forem NaN (jogos futuros ou dados ausentes).
+    """
+    if pd.isna(row['Goals_H_FT']) or pd.isna(row['Goals_A_FT']):  # Ignorar jogos futuros ou dados ausentes
+        return np.nan
+    if row['Goals_H_FT'] > row['Goals_A_FT']:
+        return 1  # Vitória do Mandante
+    elif row['Goals_H_FT'] == row['Goals_A_FT']:
+        return 0  # Empate
+    else:
+        return 2  # Vitória do Visitante
+
+# Aplicar a função ao dicionário dados_por_pais (dados históricos)
+for pais, df in dados_por_paises.items():
+    print(f"Processando resultados para o país: {pais}")
+    
+    # Verificar se as colunas necessárias existem
+    if 'Goals_H_FT' not in df.columns or 'Goals_A_FT' not in df.columns:
+        raise ValueError(f"As colunas 'Goals_H_FT' e 'Goals_A_FT' não existem no DataFrame do país {pais}.")
+    
+    # Criar a coluna 'Resultado' aplicando a função a cada linha
+    df['Resultado'] = df.apply(definir_resultado_ft, axis=1)
+
+# Aplicar a função ao DataFrame jogos_futuros
+print("Processando resultados para os jogos futuros...")
+
+# Verificar se as colunas necessárias existem
+if 'Goals_H_FT' not in jogos_futuros.columns or 'Goals_A_FT' not in jogos_futuros.columns:
+    raise ValueError("As colunas 'Goals_H_FT' e 'Goals_A_FT' não existem no DataFrame de jogos futuros.")
+
+# Criar a coluna 'Resultado' com valores NaN para jogos futuros
+jogos_futuros['Resultado'] = np.nan
+
+print("Processamento concluído!")
+
+# Bloco 5
+import pandas as pd
+import numpy as np
+
+def tratar_minutos_gols_completos(df):
+    """
+    Trata as colunas Goals_H_Minutes e Goals_A_Minutes para extrair os minutos dos gols marcados no jogo inteiro.
+    Remove as colunas originais após criar as novas colunas tratadas.
+    Retorna o DataFrame com as novas colunas adicionadas e as colunas originais removidas.
+    """
+    import ast
+
+    def extrair_gols_completos(minutos):
+        """
+        Extrai os minutos dos gols marcados ao longo do jogo inteiro.
+        """
+        # Se o valor for NaN (não é uma lista ou string), retorne NaN
+        if pd.isna(minutos):
+            return np.nan
+
+        # Se for uma string, tente convertê-la em lista
+        if isinstance(minutos, str):
+            try:
+                minutos = ast.literal_eval(minutos)  # Converte a string em lista
+            except (ValueError, SyntaxError):
+                return np.nan  # Retorna NaN se não for possível converter
+
+        # Se não for uma lista, retorne NaN
+        if not isinstance(minutos, list):
+            return np.nan
+
+        # Tratar cada minuto na lista
+        gols_tratados = []
+        for minuto in minutos:
+            if isinstance(minuto, str):
+                if '+' in minuto:  # Trata minutos com acréscimos (ex: '45+4' ou '90+2')
+                    try:
+                        minuto_base = int(minuto.split('+')[0])
+                        gols_tratados.append(minuto_base)
+                    except ValueError:
+                        continue  # Ignorar valores inválidos
+                else:
+                    try:
+                        gols_tratados.append(int(minuto))
+                    except ValueError:
+                        continue  # Ignorar valores inválidos
+            elif isinstance(minuto, (int, float)):  # Se já for um número, adicione diretamente
+                gols_tratados.append(int(minuto))
+
+        return gols_tratados if gols_tratados else np.nan  # Retorna a lista ou NaN se vazia
+
+    # Criar as novas colunas com os minutos dos gols do jogo inteiro
+    if 'Goals_H_Minutes' in df.columns:
+        df['Goals_H_Minutes'] = df['Goals_H_Minutes'].apply(extrair_gols_completos)
+    if 'Goals_A_Minutes' in df.columns:
+        df['Goals_A_Minutes'] = df['Goals_A_Minutes'].apply(extrair_gols_completos)
+
+    return df
+
+# Aplicar a função ao dicionário dados_por_pais (dados históricos)
+for pais, df in dados_por_paises.items():
+    print(f"Processando minutos dos gols para o país: {pais}")
+    dados_por_paises[pais] = tratar_minutos_gols_completos(df)
+
+# Aplicar a função ao DataFrame jogos_futuros
+print("Processando minutos dos gols para os jogos futuros...")
+jogos_futuros = tratar_minutos_gols_completos(jogos_futuros)
+
+print("Processamento concluído!")
+
+# Bloco 6
+if 'Goals_H_Minutes' in df.columns and 'Goals_A_Minutes' in df.columns:
+    print(df[['Goals_H_Minutes', 'Goals_A_Minutes']].head())
+else:
+    print(f"As colunas 'Goals_H_Minutes' e 'Goals_A_Minutes' não existem no DataFrame do país {pais}.")
+
+# Bloco 7
+import pandas as pd
+import numpy as np
+from scipy.stats import entropy
+
+def criar_features(df, is_futuro=False, dados_por_paises=None):
+    """
+    Cria todas as features necessárias para previsão de Over 2.5 FT e Over 1.5 HT,
+    incluindo médias móveis, força do time, desempenho, confrontos diretos, PPG,
+    entropia e momentum dos gols.
+
+    Parâmetros:
+        df (DataFrame): DataFrame contendo as informações das partidas.
+        is_futuro (bool): Indica se o DataFrame contém jogos futuros.
+        dados_por_paises (dict): Dicionário onde a chave é o nome da liga e o valor é o DataFrame histórico da liga.
+
+    Retorna:
+        DataFrame: DataFrame com todas as features adicionadas.
+    """
+    # Ordenar os dados por data e time
+    df = df.sort_values(by=['Date', 'Home', 'Away']).reset_index(drop=True)
+
+    # Funções auxiliares para entropia e momentum
+    def calcular_entropia(eventos):
+        if isinstance(eventos, list) and len(eventos) > 0:
+            eventos = [int(x) for x in eventos if x >= 0]
+            if len(eventos) > 0:
+                prob = np.bincount(eventos) / len(eventos)
+                return entropy(prob)
+        return 0
+
+    def calcular_momentum(eventos):
+        if isinstance(eventos, list) and len(eventos) > 1:
+            eventos = sorted(eventos)
+            diffs = np.diff(eventos)
+            return np.mean(diffs)
+        return np.nan
+
+    # Se for um DataFrame de jogos futuros, calcular as features com base nos dados históricos
+    if is_futuro and dados_por_paises is not None:
+        for index, row in df.iterrows():
+            liga = row['League']
+            time_casa = row['Home']
+            time_fora = row['Away']
+
+            # Verificar se a liga está no dicionário de dados históricos
+            if liga in dados_por_paises:
+                historico = dados_por_paises[liga]
+
+                # Selecionar jogos do time da casa e visitante no histórico
+                jogos_casa = historico[historico['Home'] == time_casa]
+                jogos_fora = historico[historico['Away'] == time_fora]
+
+                # Função para calcular métricas com base em todos os jogos históricos
+                def calcular_metricas_historicas(jogos, lado, tempo):
+                    if not jogos.empty:
+                        return jogos[f'Goals_{lado}_{tempo}'].expanding().mean().iloc[-1]  # Média acumulada até o último jogo
+                    return np.nan
+
+                # Calcular métricas para o time da casa
+                df.loc[index, 'media_gols_ht_marcados_casa'] = calcular_metricas_historicas(jogos_casa, 'H', 'HT')
+                df.loc[index, 'media_gols_ft_marcados_casa'] = calcular_metricas_historicas(jogos_casa, 'H', 'FT')
+                df.loc[index, 'media_gols_ht_sofridos_casa'] = calcular_metricas_historicas(jogos_fora, 'A', 'HT')
+                df.loc[index, 'media_gols_ft_sofridos_casa'] = calcular_metricas_historicas(jogos_fora, 'A', 'FT')
+
+                # Calcular métricas para o time visitante
+                df.loc[index, 'media_gols_ht_marcados_fora'] = calcular_metricas_historicas(jogos_fora, 'A', 'HT')
+                df.loc[index, 'media_gols_ft_marcados_fora'] = calcular_metricas_historicas(jogos_fora, 'A', 'FT')
+                df.loc[index, 'media_gols_ht_sofridos_fora'] = calcular_metricas_historicas(jogos_casa, 'H', 'HT')
+                df.loc[index, 'media_gols_ft_sofridos_fora'] = calcular_metricas_historicas(jogos_casa, 'H', 'FT')
+
+                # Força do time no primeiro tempo (HT) e tempo total (FT)
+                df.loc[index, 'forca_time_ht_casa'] = df.loc[index, 'media_gols_ht_marcados_casa'] - df.loc[index, 'media_gols_ht_sofridos_casa']
+                df.loc[index, 'forca_time_ft_casa'] = df.loc[index, 'media_gols_ft_marcados_casa'] - df.loc[index, 'media_gols_ft_sofridos_casa']
+                df.loc[index, 'forca_time_ht_fora'] = df.loc[index, 'media_gols_ht_marcados_fora'] - df.loc[index, 'media_gols_ht_sofridos_fora']
+                df.loc[index, 'forca_time_ft_fora'] = df.loc[index, 'media_gols_ft_marcados_fora'] - df.loc[index, 'media_gols_ft_sofridos_fora']
+
+                # Desempenho em casa/fora no primeiro tempo (HT) e tempo total (FT)
+                df.loc[index, 'desempenho_ht_casa'] = calcular_metricas_historicas(jogos_casa, 'H', 'HT')
+                df.loc[index, 'desempenho_ft_casa'] = calcular_metricas_historicas(jogos_casa, 'H', 'FT')
+                df.loc[index, 'desempenho_ht_fora'] = calcular_metricas_historicas(jogos_fora, 'A', 'HT')
+                df.loc[index, 'desempenho_ft_fora'] = calcular_metricas_historicas(jogos_fora, 'A', 'FT')
+
+                # PPG (Pontos Por Jogo) no primeiro tempo (HT) e tempo total (FT)
+                def calcular_ppg_historico(jogos, lado, tempo):
+                    if not jogos.empty:
+                        if lado == 'H':
+                            resultados = jogos[f'Goals_H_{tempo}'] > jogos[f'Goals_A_{tempo}']  # Vitória
+                            empates = jogos[f'Goals_H_{tempo}'] == jogos[f'Goals_A_{tempo}']    # Empate
+                        else:
+                            resultados = jogos[f'Goals_A_{tempo}'] > jogos[f'Goals_H_{tempo}']  # Vitória
+                            empates = jogos[f'Goals_A_{tempo}'] == jogos[f'Goals_H_{tempo}']    # Empate
+
+                        # Calcular pontos (3 para vitória, 1 para empate, 0 para derrota)
+                        pontos = resultados * 3 + empates * 1
+                        return pontos.mean()  # Média de pontos por jogo
+                    return np.nan
+
+                # PPG para o time da casa (em casa)
+                df.loc[index, 'ppg_ht_home'] = calcular_ppg_historico(jogos_casa, 'H', 'HT')
+                df.loc[index, 'ppg_ft_home'] = calcular_ppg_historico(jogos_casa, 'H', 'FT')
+
+                # PPG para o time visitante (fora de casa)
+                df.loc[index, 'ppg_ht_away'] = calcular_ppg_historico(jogos_fora, 'A', 'HT')
+                df.loc[index, 'ppg_ft_away'] = calcular_ppg_historico(jogos_fora, 'A', 'FT')
+
+    # Se for um DataFrame de jogos históricos, calcular as features diretamente
+    else:
+        # Médias móveis de gols marcados e sofridos no primeiro tempo (HT) e tempo total (FT)
+        for tempo, sufixo in [('HT', 'ht'), ('FT', 'ft')]:
+            df[f'media_gols_{sufixo}_marcados_casa'] = df.groupby('Home')[f'Goals_H_{tempo}'].transform(
+                lambda x: x.expanding().mean().shift()  # Média acumulada até o jogo anterior
+            )
+            df[f'media_gols_{sufixo}_sofridos_casa'] = df.groupby('Home')[f'Goals_A_{tempo}'].transform(
+                lambda x: x.expanding().mean().shift()  # Média acumulada até o jogo anterior
+            )
+            df[f'media_gols_{sufixo}_marcados_fora'] = df.groupby('Away')[f'Goals_A_{tempo}'].transform(
+                lambda x: x.expanding().mean().shift()  # Média acumulada até o jogo anterior
+            )
+            df[f'media_gols_{sufixo}_sofridos_fora'] = df.groupby('Away')[f'Goals_H_{tempo}'].transform(
+                lambda x: x.expanding().mean().shift()  # Média acumulada até o jogo anterior
+            )
+
+            # Força do time no primeiro tempo (HT) e tempo total (FT)
+            df[f'forca_time_{sufixo}_casa'] = df[f'media_gols_{sufixo}_marcados_casa'] - df[f'media_gols_{sufixo}_sofridos_casa']
+            df[f'forca_time_{sufixo}_fora'] = df[f'media_gols_{sufixo}_marcados_fora'] - df[f'media_gols_{sufixo}_sofridos_fora']
+
+            # Desempenho em casa/fora no primeiro tempo (HT) e tempo total (FT)
+            df[f'desempenho_{sufixo}_casa'] = df.groupby('Home')[f'Goals_H_{tempo}'].transform(
+                lambda x: x.expanding().mean().shift()  # Média acumulada até o jogo anterior
+            )
+            df[f'desempenho_{sufixo}_fora'] = df.groupby('Away')[f'Goals_A_{tempo}'].transform(
+                lambda x: x.expanding().mean().shift()  # Média acumulada até o jogo anterior
+            )
+
+            # PPG (Pontos Por Jogo) no primeiro tempo (HT) e tempo total (FT)
+            def calcular_ppg(df, time, local, tempo):
+                """
+                Calcula os pontos por jogo para um time em casa ou fora.
+                """
+                if local == 'home':
+                    jogos = df[df['Home'] == time].copy()
+                    resultados = jogos[f'Goals_H_{tempo}'] > jogos[f'Goals_A_{tempo}']  # Vitória
+                    empates = jogos[f'Goals_H_{tempo}'] == jogos[f'Goals_A_{tempo}']    # Empate
+                elif local == 'away':
+                    jogos = df[df['Away'] == time].copy()
+                    resultados = jogos[f'Goals_A_{tempo}'] > jogos[f'Goals_H_{tempo}']  # Vitória
+                    empates = jogos[f'Goals_A_{tempo}'] == jogos[f'Goals_H_{tempo}']    # Empate
+
+                # Calcular pontos (3 para vitória, 1 para empate, 0 para derrota)
+                pontos = resultados * 3 + empates * 1
+                return pontos.expanding().mean().shift()  # Média acumulada até o jogo anterior
+
+            # PPG para o time da casa (em casa)
+            df[f'ppg_{sufixo}_home'] = df.groupby('Home').apply(
+                lambda x: calcular_ppg(df, x.name, 'home', tempo)
+            ).reset_index(level=0, drop=True)
+
+            # PPG para o time visitante (fora de casa)
+            df[f'ppg_{sufixo}_away'] = df.groupby('Away').apply(
+                lambda x: calcular_ppg(df, x.name, 'away', tempo)
+            ).reset_index(level=0, drop=True)
+
+    # Confrontos diretos no primeiro tempo (HT) e tempo total (FT)
+    def calcular_confrontos_diretos(df, time_casa, time_fora, index_atual, tempo):
+        if index_atual > 0:  # Garantir que há dados anteriores
+            confrontos = df.iloc[:index_atual].copy()  # Dados até o jogo anterior
+            confrontos = confrontos[
+                ((confrontos['Home'] == time_casa) & (confrontos['Away'] == time_fora)) |
+                ((confrontos['Home'] == time_fora) & (confrontos['Away'] == time_casa))
+            ]
+            if len(confrontos) > 0:
+                return confrontos[f'TotalGoals_{tempo}'].mean()
+        return np.nan  # Retornar NaN se não houver confrontos diretos
+
+    for tempo, sufixo in [('HT', 'ht'), ('FT', 'ft')]:
+        df[f'confrontos_diretos_{sufixo}'] = df.apply(
+            lambda row: calcular_confrontos_diretos(df, row['Home'], row['Away'], row.name, tempo), axis=1
+        )
+
+    # Tratar valores nulos e infinitos
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    # Selecionar apenas colunas numéricas válidas
+    colunas_numericas = df.select_dtypes(include=[np.number]).columns
+
+    # Preencher valores nulos com a média de cada coluna
+    for coluna in colunas_numericas:
+        df[coluna] = df[coluna].fillna(df[coluna].mean())
+
+    return df
+
+# Aplicar a função ao dicionário dados_por_paises (dados históricos)
+for pais, df in dados_por_paises.items():
+    print(f"Processando features para o país: {pais}")
+    dados_por_paises[pais] = criar_features(df)
+
+# Aplicar a função ao DataFrame jogos_futuros
+print("Processando features para os jogos futuros...")
+jogos_futuros = criar_features(jogos_futuros, is_futuro=True, dados_por_paises=dados_por_paises)
+
+print("Processamento concluído!")
+
+# Bloco 8
+import pandas as pd
+import numpy as np
+
+def criar_features_tempo_gols(df, is_futuro=False, dados_por_paises=None):
+    """
+    Cria features relacionadas ao tempo de gols marcados e sofridos pelos times, diferenciando
+    entre casa e fora, para identificar tendências temporais e vantagens.
+
+    Parâmetros:
+    - df: DataFrame com colunas 'Goals_H_Minutes' e 'Goals_A_Minutes'.
+    - is_futuro: Indica se o DataFrame contém jogos futuros.
+    - dados_por_paises: Dicionário onde a chave é o nome da liga e o valor é o DataFrame histórico da liga.
+
+    Retorna:
+    - DataFrame com as novas features.
+    """
+
+    # Função auxiliar para calcular proporções de gols por intervalo de tempo
+    def calcular_proporcao_gols(minutos_gols, intervalos):
+        """
+        Calcula a proporção de gols marcados em cada intervalo de tempo.
+        """
+        # Verificar se o valor é NaN ou não é uma lista
+        if minutos_gols is None or not isinstance(minutos_gols, list) or len(minutos_gols) == 0:
+            return [0.0] * len(intervalos)  # Retorna uma lista de zeros se não houver gols
+
+        proporcoes = []
+        for inicio, fim in intervalos:
+            # Conta quantos gols estão no intervalo
+            gols_no_intervalo = sum(inicio <= minuto <= fim for minuto in minutos_gols)
+            # Calcula a proporção
+            proporcao = gols_no_intervalo / len(minutos_gols) if len(minutos_gols) > 0 else 0.0
+            proporcoes.append(proporcao)
+        return proporcoes
+
+    # Intervalos de tempo em minutos
+    intervalos = [(0, 15), (16, 30), (31, 45), (46, 60), (61, 75), (76, 90)]
+
+    # Se for um DataFrame de jogos futuros, calcular as features com base nos dados históricos
+    if is_futuro and dados_por_paises is not None:
+        for index, row in df.iterrows():
+            liga = row['League']
+            time_casa = row['Home']
+            time_fora = row['Away']
+
+            # Verificar se a liga está no dicionário de dados históricos
+            if liga in dados_por_paises:
+                historico = dados_por_paises[liga]
+
+                # Selecionar jogos do time da casa e visitante no histórico
+                jogos_casa = historico[historico['Home'] == time_casa]
+                jogos_fora = historico[historico['Away'] == time_fora]
+
+                # Função para agregar as métricas
+                def calcular_metricas_agrupadas(jogos, lado):
+                    if not jogos.empty:
+                        minutos_gols = []
+                        for lista in jogos[f'Goals_{lado}_Minutes'].dropna():
+                            if isinstance(lista, list):
+                                minutos_gols.extend(lista)
+                            elif isinstance(lista, (int, float)):
+                                minutos_gols.append(lista)
+                        
+                        return calcular_proporcao_gols(minutos_gols, intervalos)
+                    return [0.0] * len(intervalos)
+
+                # Métricas do time da casa
+                proporcoes_gols_marcados_casa = calcular_metricas_agrupadas(jogos_casa, 'H')
+                proporcoes_gols_sofridos_casa = calcular_metricas_agrupadas(jogos_fora, 'A')
+
+                # Métricas do time visitante
+                proporcoes_gols_marcados_fora = calcular_metricas_agrupadas(jogos_fora, 'A')
+                proporcoes_gols_sofridos_fora = calcular_metricas_agrupadas(jogos_casa, 'H')
+
+                # Adicionar as métricas calculadas ao DataFrame
+                for i, (inicio, fim) in enumerate(intervalos):
+                    df.loc[index, f'casa_gols_{inicio}_{fim}'] = proporcoes_gols_marcados_casa[i]
+                    df.loc[index, f'casa_sofridos_{inicio}_{fim}'] = proporcoes_gols_sofridos_casa[i]
+                    df.loc[index, f'fora_gols_{inicio}_{fim}'] = proporcoes_gols_marcados_fora[i]
+                    df.loc[index, f'fora_sofridos_{inicio}_{fim}'] = proporcoes_gols_sofridos_fora[i]
+
+    # Se for um DataFrame de jogos históricos, calcular as features diretamente
+    else:
+        # Verificar se as colunas existem e estão no formato correto
+        if 'Goals_H_Minutes' in df.columns:
+            df['Goals_H_Minutes'] = df['Goals_H_Minutes'].apply(lambda x: x if isinstance(x, list) else np.nan)
+        if 'Goals_A_Minutes' in df.columns:
+            df['Goals_A_Minutes'] = df['Goals_A_Minutes'].apply(lambda x: x if isinstance(x, list) else np.nan)
+
+        # Proporções de gols marcados e sofridos por intervalos
+        df['proporcoes_gols_marcados_casa'] = df['Goals_H_Minutes'].apply(lambda x: calcular_proporcao_gols(x, intervalos))
+        df['proporcoes_gols_marcados_fora'] = df['Goals_A_Minutes'].apply(lambda x: calcular_proporcao_gols(x, intervalos))
+
+        # Para sofrer gols, invertemos casa e fora
+        df['proporcoes_gols_sofridos_casa'] = df['Goals_A_Minutes'].apply(lambda x: calcular_proporcao_gols(x, intervalos))
+        df['proporcoes_gols_sofridos_fora'] = df['Goals_H_Minutes'].apply(lambda x: calcular_proporcao_gols(x, intervalos))
+
+        # Expansão de intervalos como colunas separadas para análise detalhada
+        for i, (inicio, fim) in enumerate(intervalos):
+            df[f'casa_gols_{inicio}_{fim}'] = df['proporcoes_gols_marcados_casa'].apply(lambda x: x[i])
+            df[f'fora_gols_{inicio}_{fim}'] = df['proporcoes_gols_marcados_fora'].apply(lambda x: x[i])
+            df[f'casa_sofridos_{inicio}_{fim}'] = df['proporcoes_gols_sofridos_casa'].apply(lambda x: x[i])
+            df[f'fora_sofridos_{inicio}_{fim}'] = df['proporcoes_gols_sofridos_fora'].apply(lambda x: x[i])
+
+        # Remover colunas intermediárias
+        df.drop(columns=['proporcoes_gols_marcados_casa', 'proporcoes_gols_marcados_fora',
+                         'proporcoes_gols_sofridos_casa', 'proporcoes_gols_sofridos_fora'], inplace=True)
+
+    # Criar variáveis agregadas de tendência
+    def calcular_vantagem_temporal(row):
+        """
+        Calcula a vantagem temporal baseada na diferença entre proporções de gols marcados
+        e sofridos por intervalos.
+        """
+        vantagem_casa = sum(
+            m - s for m, s in zip([row[f'casa_gols_{inicio}_{fim}'] for inicio, fim in intervalos],
+                                  [row[f'fora_sofridos_{inicio}_{fim}'] for inicio, fim in intervalos])
+        )
+        vantagem_fora = sum(
+            m - s for m, s in zip([row[f'fora_gols_{inicio}_{fim}'] for inicio, fim in intervalos],
+                                  [row[f'casa_sofridos_{inicio}_{fim}'] for inicio, fim in intervalos])
+        )
+        return pd.Series({'vantagem_temporal_casa': vantagem_casa, 'vantagem_temporal_fora': vantagem_fora})
+
+    vantagens = df.apply(calcular_vantagem_temporal, axis=1)
+    df = pd.concat([df, vantagens], axis=1)
+
+    return df
+
+# Aplicar a função ao dicionário dados_por_paises (dados históricos)
+for pais, df in dados_por_paises.items():
+    print(f"Processando features de tempo de gols para o país: {pais}")
+    dados_por_paises[pais] = criar_features_tempo_gols(df)
+
+# Aplicar a função ao DataFrame jogos_futuros
+print("Processando features de tempo de gols para os jogos futuros...")
+jogos_futuros = criar_features_tempo_gols(jogos_futuros, is_futuro=True, dados_por_paises=dados_por_paises)
+
+print("Processamento concluído!")
+
+# Bloco 9
+import pandas as pd
+
+def criar_variavel_tendencia_gols(df, dados_por_paises=None, limite_ht=1.5, limite_ft=2.5):
+    """
+    Cria variáveis de probabilidade baseadas em tendências de gols marcados e sofridos
+    para prever Over 2.5 FT e Over 1.5 HT.
+
+    Parâmetros:
+    -----------
+    df : pd.DataFrame
+        DataFrame contendo os jogos (históricos ou futuros).
+    dados_por_paises : dict, opcional
+        Dicionário onde a chave é o nome da liga e o valor é o DataFrame histórico da liga.
+        Necessário apenas para jogos futuros.
+    limite_ht : float, opcional
+        Limite de gols para considerar Over no primeiro tempo (HT). Padrão é 1.5.
+    limite_ft : float, opcional
+        Limite de gols para considerar Over no tempo completo (FT). Padrão é 2.5.
+
+    Retorna:
+    --------
+    pd.DataFrame
+        DataFrame com as novas variáveis de probabilidade adicionadas.
+    """
+    # Função para calcular probabilidades históricas
+    def calcular_probabilidades(df, time, local):
+        """
+        Calcula a probabilidade de um time marcar mais de `limite_ht` gols no HT
+        e mais de `limite_ft` gols no FT.
+        """
+        if local == 'home':
+            jogos = df[df['Home'] == time]
+            prob_ht = (jogos['Goals_H_HT'] > limite_ht).mean()
+            prob_ft = (jogos['Goals_H_FT'] > limite_ft).mean()
+        elif local == 'away':
+            jogos = df[df['Away'] == time]
+            prob_ht = (jogos['Goals_A_HT'] > limite_ht).mean()
+            prob_ft = (jogos['Goals_A_FT'] > limite_ft).mean()
+        return prob_ht, prob_ft
+
+    # Verificar se estamos lidando com jogos futuros
+    is_futuro = 'TotalGoals_HT' not in df.columns or 'TotalGoals_FT' not in df.columns
+
+    # Adicionar colunas para armazenar as probabilidades
+    df['prob_home_ht'] = 0.0
+    df['prob_away_ht'] = 0.0
+    df['prob_home_ft'] = 0.0
+    df['prob_away_ft'] = 0.0
+
+    for index, row in df.iterrows():
+        liga = row['League']
+        time_casa = row['Home']
+        time_fora = row['Away']
+
+        # Se for um jogo futuro, usar os dados históricos da liga
+        if is_futuro and dados_por_paises is not None and liga in dados_por_paises:
+            historico = dados_por_paises[liga]
+
+            # Calcular probabilidades para o time da casa
+            prob_home_ht, prob_home_ft = calcular_probabilidades(historico, time_casa, 'home')
+            df.at[index, 'prob_home_ht'] = prob_home_ht
+            df.at[index, 'prob_home_ft'] = prob_home_ft
+
+            # Calcular probabilidades para o time visitante
+            prob_away_ht, prob_away_ft = calcular_probabilidades(historico, time_fora, 'away')
+            df.at[index, 'prob_away_ht'] = prob_away_ht
+            df.at[index, 'prob_away_ft'] = prob_away_ft
+        else:
+            # Para dados históricos, calcular as probabilidades diretamente
+            prob_home_ht, prob_home_ft = calcular_probabilidades(df, time_casa, 'home')
+            df.at[index, 'prob_home_ht'] = prob_home_ht
+            df.at[index, 'prob_home_ft'] = prob_home_ft
+
+            prob_away_ht, prob_away_ft = calcular_probabilidades(df, time_fora, 'away')
+            df.at[index, 'prob_away_ht'] = prob_away_ht
+            df.at[index, 'prob_away_ft'] = prob_away_ft
+
+    # Calcular probabilidade conjunta para Over 1.5 HT e Over 2.5 FT
+    df['prob_over_1_5_ht'] = df['prob_home_ht'] * df['prob_away_ht']
+    df['prob_over_2_5_ft'] = df['prob_home_ft'] * df['prob_away_ft']
+
+    # Ajustar probabilidades com base em dados históricos (frequência real de overs)
+    if not is_futuro:
+        frequencia_real_ht = (df['TotalGoals_HT'] > limite_ht).mean()
+        frequencia_real_ft = (df['TotalGoals_FT'] > limite_ft).mean()
+        df['prob_over_1_5_ht'] *= frequencia_real_ht
+        df['prob_over_2_5_ft'] *= frequencia_real_ft
+    else:
+        # Para jogos futuros, usar a média global das probabilidades históricas
+        if dados_por_paises is not None:
+            todas_ligas = pd.concat(dados_por_paises.values())
+            frequencia_real_ht = (todas_ligas['TotalGoals_HT'] > limite_ht).mean()
+            frequencia_real_ft = (todas_ligas['TotalGoals_FT'] > limite_ft).mean()
+            df['prob_over_1_5_ht'] *= frequencia_real_ht
+            df['prob_over_2_5_ft'] *= frequencia_real_ft
+
+    return df
+
+# Aplicar a função ao dicionário dados_por_paises (dados históricos)
+for pais, df in dados_por_paises.items():
+    print(f"Processando tendências de gols para o país: {pais}")
+    dados_por_paises[pais] = criar_variavel_tendencia_gols(df)
+
+# Aplicar a função ao DataFrame jogos_futuros
+print("Processando tendências de gols para os jogos futuros...")
+jogos_futuros = criar_variavel_tendencia_gols(jogos_futuros, dados_por_paises=dados_por_paises)
+
+print("Processamento concluído!")
+
+# Bloco 10
+import pandas as pd
+import numpy as np
+from scipy.stats import entropy
+
+def criar_features_avancadas(df, is_futuro=False, dados_por_paises=None):
+    """
+    Cria features avançadas para previsão de Over 2.5 FT e Over 1.5 HT.
+    
+    Parâmetros:
+        df (DataFrame): DataFrame contendo as informações das partidas.
+        is_futuro (bool): Indica se o DataFrame contém jogos futuros.
+        dados_por_paises (dict): Dicionário onde a chave é o nome da liga e o valor é o DataFrame histórico da liga.
+    
+    Retorna:
+        DataFrame: DataFrame com as novas features adicionadas.
+    """
+
+    # Função para calcular entropia
+    def calcular_entropia(eventos):
+        """
+        Calcula a entropia de Shannon para uma lista de eventos.
+        """
+        if isinstance(eventos, list) and len(eventos) > 0:
+            eventos = [int(x) for x in eventos if x >= 0]  # Garantir que os valores sejam inteiros não negativos
+            if len(eventos) > 0:
+                prob = np.bincount(eventos) / len(eventos)
+                return entropy(prob)
+        return 0
+
+    # Função para calcular momentum (tempo médio entre eventos)
+    def calcular_momentum(eventos):
+        """
+        Calcula o tempo médio entre eventos (gols ou outras ocorrências) ao longo do jogo.
+        """
+        if isinstance(eventos, list) and len(eventos) > 1:
+            eventos = sorted(eventos)
+            diffs = np.diff(eventos)  # Diferenças entre os minutos
+            return np.mean(diffs)
+        return np.nan
+
+    # Função para calcular a média ponderada do tempo dos eventos
+    def calcular_peso_temporal(eventos):
+        """
+        Calcula o momento médio ponderado dos minutos dos eventos.
+        """
+        if isinstance(eventos, list) and len(eventos) > 0:
+            return np.average(eventos, weights=np.arange(1, len(eventos) + 1))
+        return np.nan
+
+    # Função para detectar sequência de gols rápidos
+    def calcular_gols_rapidos(eventos, intervalo=5):
+        """
+        Conta pares de gols marcados com intervalo menor ou igual ao especificado.
+        """
+        if isinstance(eventos, list) and len(eventos) > 1:
+            eventos = sorted(eventos)
+            return sum(1 for i in range(len(eventos) - 1) if eventos[i + 1] - eventos[i] <= intervalo)
+        return 0
+
+    # Se for um DataFrame de jogos futuros, calcular as features com base nos dados históricos
+    if is_futuro and dados_por_paises is not None:
+        for index, row in df.iterrows():
+            liga = row['League']
+            time_casa = row['Home']
+            time_fora = row['Away']
+
+            if liga in dados_por_paises:
+                historico = dados_por_paises[liga]
+
+                # Selecionar jogos do time da casa e visitante
+                jogos_casa = historico[historico['Home'] == time_casa]
+                jogos_fora = historico[historico['Away'] == time_fora]
+
+                # Função para agregar as métricas
+                def calcular_metricas_agrupadas(jogos, lado):
+                    if not jogos.empty:
+                        minutos_gols = []
+                        for lista in jogos[f'Goals_{lado}_Minutes'].dropna():
+                            if isinstance(lista, list):
+                                minutos_gols.extend(lista)
+                            elif isinstance(lista, (int, float)):
+                                minutos_gols.append(lista)
+                        
+                        entropia = calcular_entropia(minutos_gols)
+                        momentum = calcular_momentum(minutos_gols)
+                        peso_temporal = calcular_peso_temporal(minutos_gols)
+                        gols_rapidos = calcular_gols_rapidos(minutos_gols)
+                        return entropia, momentum, peso_temporal, gols_rapidos
+                    return 0, 0, 0, 0
+
+                # Métricas do time da casa
+                entropia_casa, momentum_casa, peso_temporal_casa, gols_rapidos_casa = calcular_metricas_agrupadas(
+                    jogos_casa, 'H'
+                )
+
+                # Métricas do time visitante
+                entropia_fora, momentum_fora, peso_temporal_fora, gols_rapidos_fora = calcular_metricas_agrupadas(
+                    jogos_fora, 'A'
+                )
+
+                # Adicionar as métricas calculadas ao DataFrame
+                df.loc[index, 'entropia_gols_H'] = entropia_casa
+                df.loc[index, 'momentum_gols_H'] = momentum_casa
+                df.loc[index, 'peso_temporal_gols_H'] = peso_temporal_casa
+                df.loc[index, 'gols_rapidos_H'] = gols_rapidos_casa
+
+                df.loc[index, 'entropia_gols_A'] = entropia_fora
+                df.loc[index, 'momentum_gols_A'] = momentum_fora
+                df.loc[index, 'peso_temporal_gols_A'] = peso_temporal_fora
+                df.loc[index, 'gols_rapidos_A'] = gols_rapidos_fora
+
+                # Calcular as diferenças
+                df.loc[index, 'delta_entropia_gols'] = entropia_casa - entropia_fora
+                df.loc[index, 'delta_momentum_gols'] = momentum_casa - momentum_fora
+                df.loc[index, 'delta_peso_temporal_gols'] = peso_temporal_casa - peso_temporal_fora
+                df.loc[index, 'delta_gols_rapidos'] = gols_rapidos_casa - gols_rapidos_fora
+
+    # Se for um DataFrame de jogos históricos, calcular as features diretamente
+    else:
+        # Aplicar as funções para os times da casa e visitantes
+        for lado, col in [('H', 'Goals_H_Minutes'), ('A', 'Goals_A_Minutes')]:
+            df[f'entropia_gols_{lado}'] = df[col].apply(calcular_entropia)
+            df[f'momentum_gols_{lado}'] = df[col].apply(calcular_momentum)
+            df[f'peso_temporal_gols_{lado}'] = df[col].apply(calcular_peso_temporal)
+            df[f'gols_rapidos_{lado}'] = df[col].apply(lambda x: calcular_gols_rapidos(x, intervalo=5))
+
+        # Calcular a diferença entre casa e visitante para as métricas acima
+        df['delta_entropia_gols'] = df['entropia_gols_H'] - df['entropia_gols_A']
+        df['delta_momentum_gols'] = df['momentum_gols_H'] - df['momentum_gols_A']
+        df['delta_peso_temporal_gols'] = df['peso_temporal_gols_H'] - df['peso_temporal_gols_A']
+        df['delta_gols_rapidos'] = df['gols_rapidos_H'] - df['gols_rapidos_A']
+
+    # Calcular features baseadas no tempo agregado
+    for lado, col in [('H', 'Goals_H_Minutes'), ('A', 'Goals_A_Minutes')]:
+        df[f'soma_minutos_gols_{lado}'] = df[col].apply(lambda x: sum(x) if isinstance(x, list) else np.nan)
+        df[f'max_minuto_gols_{lado}'] = df[col].apply(lambda x: max(x) if isinstance(x, list) and len(x) > 0 else np.nan)
+        df[f'min_minuto_gols_{lado}'] = df[col].apply(lambda x: min(x) if isinstance(x, list) and len(x) > 0 else np.nan)
+
+    # 1. Multiplicações e Interações entre Features
+    df['interacao_momentum_gols'] = df['momentum_gols_H'] * df['momentum_gols_A']
+    df['interacao_peso_temporal'] = df['peso_temporal_gols_H'] * df['peso_temporal_gols_A']
+    df['interacao_entropia_momentum'] = df['delta_entropia_gols'] * df['delta_momentum_gols']
+
+    # 2. Taxas de Gols e Eficiência
+    df['taxa_gols_por_chutes_H'] = df['Goals_H_FT'] / df['ShotsOnTarget_H']
+    df['taxa_gols_por_chutes_A'] = df['Goals_A_FT'] / df['ShotsOnTarget_A']
+    df['taxa_gols_por_chutes_totais_H'] = df['Goals_H_FT'] / df['Shots_H']
+    df['taxa_gols_por_chutes_totais_A'] = df['Goals_A_FT'] / df['Shots_A']
+
+    # 4. Diferenças no Contexto do Jogo
+    df['relacao_odd_over25'] = df['Odd_Over25_FT'] / df['Odd_Under25_FT']
+    df['relacao_odd_over15_ht'] = df['Odd_Over15_HT'] / df['Odd_Under15_HT']
+
+    # 5. Novas Features Derivadas dos Minutos dos Gols
+    def calcular_gols_finais(eventos, limite=35):
+        if isinstance(eventos, list) and len(eventos) > 0:
+            return sum(1 for x in eventos if x > limite) / len(eventos)
+        return 0
+
+    df['pressao_final_ht_H'] = df['Goals_H_Minutes'].apply(lambda x: calcular_gols_finais(x, limite=35))
+    df['pressao_final_ht_A'] = df['Goals_A_Minutes'].apply(lambda x: calcular_gols_finais(x, limite=35))
+
+    # 6. Estatísticas Agregadas dos Adversários
+    df['media_gols_adversarios_home'] = df.groupby(['Home'])['Goals_A_FT'].transform('mean')
+    df['media_gols_adversarios_away'] = df.groupby(['Away'])['Goals_H_FT'].transform('mean')
+
+    # 7. Features Avançadas com Probabilidades
+    df['prob_odd_over25_ft'] = np.where(df['Odd_Over25_FT'] != 0, 1 / df['Odd_Over25_FT'], 0)
+    df['prob_odd_over15_ht'] = np.where(df['Odd_Over15_HT'] != 0, 1 / df['Odd_Over15_HT'], 0)
+
+    df['ajuste_prob_over25_ft_home'] = df['prob_odd_over25_ft'] * df['media_gols_ft_marcados_casa']
+    df['ajuste_prob_over15_ht_home'] = df['prob_odd_over15_ht'] * df['media_gols_ft_marcados_casa']
+
+    # Tratamento de valores nulos ou infinitos
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    df.fillna(0, inplace=True)  # Substituir NaN por 0 ou outro valor padrão
+
+    return df
+
+# Aplicar a função ao dicionário dados_por_paises (dados históricos)
+for pais, df in dados_por_paises.items():
+    print(f"Processando features avançadas para o país: {pais}")
+    dados_por_paises[pais] = criar_features_avancadas(df)
+
+# Aplicar a função ao DataFrame jogos_futuros
+print("Processando features avançadas para os jogos futuros...")
+jogos_futuros = criar_features_avancadas(jogos_futuros, is_futuro=True, dados_por_paises=dados_por_paises)
+
+print("Processamento concluído!")
+
+# Bloco 11
+# Função para calcular médias móveis no DataFrame histórico
+def calcular_medias_moveis(df):
+    """
+    Calcula médias móveis para as colunas relevantes no DataFrame histórico.
+    
+    Parâmetros:
+        df (DataFrame): DataFrame contendo os dados históricos.
+    
+    Retorna:
+        DataFrame: DataFrame com as médias móveis adicionadas.
+    """
+    # Calcular médias móveis para Over 2.5 FT e Over 1.5 HT
+    df['media_movel_over25_home'] = df.groupby('Home')['TotalGoals_FT'].transform(
+        lambda x: x.rolling(window=5, min_periods=1).mean().shift()
+    )
+    df['media_movel_over25_away'] = df.groupby('Away')['TotalGoals_FT'].transform(
+        lambda x: x.rolling(window=5, min_periods=1).mean().shift()
+    )
+    df['media_movel_over15_ht_home'] = df.groupby('Home')['TotalGoals_HT'].transform(
+        lambda x: x.rolling(window=5, min_periods=1).mean().shift()
+    )
+    df['media_movel_over15_ht_away'] = df.groupby('Away')['TotalGoals_HT'].transform(
+        lambda x: x.rolling(window=5, min_periods=1).mean().shift()
+    )
+
+    return df
+
+# Função para aplicar médias móveis aos jogos futuros
+def aplicar_medias_moveis_aos_futuros(jogos_futuros, dados_por_paises):
+    """
+    Aplica as médias móveis do DataFrame histórico aos jogos futuros.
+    
+    Parâmetros:
+        jogos_futuros (DataFrame): DataFrame contendo os jogos futuros.
+        dados_por_paises (dict): Dicionário onde a chave é o nome da liga e o valor é o DataFrame histórico da liga.
+    
+    Retorna:
+        DataFrame: DataFrame de jogos futuros com as médias móveis adicionadas.
+    """
+    # Iterar sobre cada jogo futuro
+    for index, row in jogos_futuros.iterrows():
+        liga = row['League']
+        time_casa = row['Home']
+        time_fora = row['Away']
+
+        # Verificar se a liga está no dicionário de dados históricos
+        if liga in dados_por_paises:
+            historico = dados_por_paises[liga]
+
+            # Obter a última média móvel para o time da casa
+            media_movel_over25_home = historico[historico['Home'] == time_casa]['media_movel_over25_home'].iloc[-1]
+            media_movel_over15_ht_home = historico[historico['Home'] == time_casa]['media_movel_over15_ht_home'].iloc[-1]
+
+            # Obter a última média móvel para o time visitante
+            media_movel_over25_away = historico[historico['Away'] == time_fora]['media_movel_over25_away'].iloc[-1]
+            media_movel_over15_ht_away = historico[historico['Away'] == time_fora]['media_movel_over15_ht_away'].iloc[-1]
+
+            # Adicionar as métricas ao DataFrame de jogos futuros
+            jogos_futuros.loc[index, 'media_movel_over25_home'] = media_movel_over25_home
+            jogos_futuros.loc[index, 'media_movel_over15_ht_home'] = media_movel_over15_ht_home
+            jogos_futuros.loc[index, 'media_movel_over25_away'] = media_movel_over25_away
+            jogos_futuros.loc[index, 'media_movel_over15_ht_away'] = media_movel_over15_ht_away
+
+    return jogos_futuros
+
+# Aplicar a função de médias móveis ao DataFrame histórico
+for pais, df in dados_por_paises.items():
+    dados_por_paises[pais] = calcular_medias_moveis(df)
+
+# Aplicar as médias móveis aos jogos futuros
+jogos_futuros = aplicar_medias_moveis_aos_futuros(jogos_futuros, dados_por_paises)
+
+print("Médias móveis aplicadas aos jogos futuros com sucesso!")
+
+# Bloco 12
+# Adicionar as colunas Over25_FT e Over15_HT a cada DataFrame em dados_por_paises
+for pais, df in dados_por_paises.items():
+    df['Over25_FT'] = (df['TotalGoals_FT'] > 2.5).astype(int)  # 1 se Over 2.5 FT, 0 caso contrário
+    df['Over15_HT'] = (df['TotalGoals_HT'] > 1.5).astype(int)  # 1 se Over 1.5 HT, 0 caso contrário
+
+# Bloco 13
+from xgboost import XGBClassifier
+from sklearn.model_selection import train_test_split
+import pandas as pd
+import joblib  # Adicione esta linha
+
+# Função para simular apostas por tipo (Over 2.5 FT e Over 1.5 HT)
+def simular_apostas_por_tipo(X_test, y_test, y_pred, odds):
+    lucro, investimento = 0, 0
+
+    for i in range(len(y_test)):
+        # Aposta
+        if y_pred[i] == 1:  # Previsão: Over
+            investimento += 100
+            if y_test.iloc[i] == 1:  # Resultado real: Over
+                lucro += (odds.iloc[i] - 1) * 100  # Lucro da aposta vencedora
+            else:
+                lucro -= 100  # Prejuízo da aposta perdida
+
+    roi = (lucro / investimento) * 100 if investimento > 0 else 0
+    return lucro, investimento, roi
+
+# Função para treinar e avaliar o modelo XGBoost para ambos os tipos de aposta
+def treinar_e_avaliar_xgboost(df, pais):
+    print("\nTreinando XGBoost com parâmetros padrão...")
+    
+    # 1. Selecionar as features e as variáveis alvo
+    features_selecionadas = [
+        'media_gols_ft_marcados_casa', 'media_gols_ft_sofridos_casa', 'media_gols_ft_marcados_fora', 'media_gols_ft_sofridos_fora', 
+        'forca_time_ft_casa', 'forca_time_ft_fora', 'desempenho_ft_casa', 'desempenho_ft_fora', 'confrontos_diretos_ft', 
+        'ppg_ft_home', 'ppg_ft_away', 'vantagem_temporal_casa', 'vantagem_temporal_fora', 'casa_gols_0_15', 'fora_gols_0_15', 
+        'casa_sofridos_0_15', 'fora_sofridos_0_15', 'casa_gols_16_30', 'fora_gols_16_30', 'casa_sofridos_16_30', 'fora_sofridos_16_30', 
+        'casa_gols_31_45', 'fora_gols_31_45', 'casa_sofridos_31_45', 'fora_sofridos_31_45', 'casa_gols_46_60', 'fora_gols_46_60', 
+        'casa_sofridos_46_60', 'fora_sofridos_46_60', 'casa_gols_61_75', 'fora_gols_61_75', 'casa_sofridos_61_75', 'fora_sofridos_61_75', 
+        'casa_gols_76_90', 'fora_gols_76_90', 'casa_sofridos_76_90', 'fora_sofridos_76_90', 'prob_home_ht', 'prob_away_ht', 
+        'prob_home_ft', 'prob_away_ft', 'prob_over_1_5_ht', 'prob_over_2_5_ft', 'entropia_gols_H', 'momentum_gols_H', 
+        'peso_temporal_gols_H', 'gols_rapidos_H', 'entropia_gols_A', 'momentum_gols_A', 'peso_temporal_gols_A', 'gols_rapidos_A', 
+        'delta_entropia_gols', 'delta_momentum_gols', 'delta_peso_temporal_gols', 'delta_gols_rapidos', 'soma_minutos_gols_H', 
+        'max_minuto_gols_H', 'min_minuto_gols_H', 'soma_minutos_gols_A', 'max_minuto_gols_A', 'min_minuto_gols_A', 
+        'interacao_momentum_gols', 'interacao_peso_temporal', 'interacao_entropia_momentum', 'taxa_gols_por_chutes_H', 
+        'taxa_gols_por_chutes_A', 'taxa_gols_por_chutes_totais_H', 'taxa_gols_por_chutes_totais_A', 'media_movel_over25_home', 'media_movel_over25_away', 
+        'media_movel_over15_ht_home', 'media_movel_over15_ht_away', 'relacao_odd_over25', 'relacao_odd_over15_ht', 'pressao_final_ht_H', 
+        'pressao_final_ht_A', 'media_gols_adversarios_home', 'media_gols_adversarios_away', 'prob_odd_over25_ft', 'prob_odd_over15_ht', 
+        'ajuste_prob_over25_ft_home', 'ajuste_prob_over15_ht_home'
+    ]
+    
+    # Definir as variáveis alvo para Over 2.5 FT e Over 1.5 HT
+    y_over25 = df['Over25_FT']  # Coluna que indica se o jogo teve Over 2.5 FT (1) ou não (0)
+    y_over15 = df['Over15_HT']  # Coluna que indica se o jogo teve Over 1.5 HT (1) ou não (0)
+    
+    X = df[features_selecionadas]
+    
+    # 2. Dividir os dados em treino e teste
+    X_train, X_test, y_train_over25, y_test_over25 = train_test_split(X, y_over25, test_size=0.2, random_state=42)
+    _, _, y_train_over15, y_test_over15 = train_test_split(X, y_over15, test_size=0.2, random_state=42)
+    
+    # 3. Treinar o modelo XGBoost para Over 2.5 FT
+    print("\nTreinando modelo para Over 2.5 FT...")
+    xgb_model_over25 = XGBClassifier(random_state=42, eval_metric='logloss')  # Parâmetros padrão
+    xgb_model_over25.fit(X_train, y_train_over25)
+    
+    # 4. Treinar o modelo XGBoost para Over 1.5 HT
+    print("\nTreinando modelo para Over 1.5 HT...")
+    xgb_model_over15 = XGBClassifier(random_state=42, eval_metric='logloss')  # Parâmetros padrão
+    xgb_model_over15.fit(X_train, y_train_over15)
+    
+    # 5. Fazer previsões no conjunto de teste
+    y_pred_over25 = xgb_model_over25.predict(X_test)
+    y_pred_over15 = xgb_model_over15.predict(X_test)
+    
+    # 6. Simular apostas e calcular ROI
+    odds_over_25 = df.loc[X_test.index, 'Odd_Over25_FT']
+    odds_over_15 = df.loc[X_test.index, 'Odd_Over15_HT']
+    
+    lucro_over_25, investimento_over_25, roi_over_25 = simular_apostas_por_tipo(X_test, y_test_over25, y_pred_over25, odds_over_25)
+    lucro_over_15, investimento_over_15, roi_over_15 = simular_apostas_por_tipo(X_test, y_test_over15, y_pred_over15, odds_over_15)
+    
+    # 7. Salvar os modelos treinados
+    print("\nSalvando modelos treinados...")
+    joblib.dump(xgb_model_over25, f'modelo_over25_{pais}.joblib')  # Salva o modelo Over 2.5 FT
+    joblib.dump(xgb_model_over15, f'modelo_over15_{pais}.joblib')  # Salva o modelo Over 1.5 HT
+    print(f"Modelos para {pais} salvos com sucesso.")
+    
+    # 8. Retornar resultados e modelos
+    return {
+        'modelo_over25': xgb_model_over25,
+        'modelo_over15': xgb_model_over15,
+        'Over25_FT': {'lucro': lucro_over_25, 'investimento': investimento_over_25, 'roi': roi_over_25},
+        'Over15_HT': {'lucro': lucro_over_15, 'investimento': investimento_over_15, 'roi': roi_over_15}
+    }
+
+# Dicionário para armazenar os resultados por país
+resultados_por_pais = {}
+
+# Lista para armazenar países com ROI positivo
+paises_com_roi_positivo = []
+
+# Iterar sobre cada país e aplicar a função
+for pais, df in dados_por_paises.items():
+    print(f"\nProcessando país: {pais}")
+    resultados = treinar_e_avaliar_xgboost(df, pais)  # Passe o país como argumento
+    resultados_por_pais[pais] = resultados
+    
+    # Exibir resultados
+    print(f"Resultados para {pais}:")
+    print(f"Lucro Over 2.5 FT: {resultados['Over25_FT']['lucro']}")
+    print(f"Investimento Over 2.5 FT: {resultados['Over25_FT']['investimento']}")
+    print(f"ROI Over 2.5 FT: {resultados['Over25_FT']['roi']:.2f}%")
+    print(f"Lucro Over 1.5 HT: {resultados['Over15_HT']['lucro']}")
+    print(f"Investimento Over 1.5 HT: {resultados['Over15_HT']['investimento']}")
+    print(f"ROI Over 1.5 HT: {resultados['Over15_HT']['roi']:.2f}%")
+    
+    # Verificar se algum ROI é positivo e adicionar à lista de países com ROI positivo
+    if resultados['Over25_FT']['roi'] > 0 or resultados['Over15_HT']['roi'] > 0:
+        paises_com_roi_positivo.append(pais)
+        print(f"{pais} adicionado à lista de países com ROI positivo.")
+    else:
+        print(f"Nenhum ROI positivo encontrado para {pais}.")
+
+# Exibir a lista de países com ROI positivo
+print("\nPaíses com ROI positivo:")
+print(paises_com_roi_positivo)
+
+# <h1> Jogos Futuros </h1>
+
+# Bloco 14
+import pandas as pd
+
+# Configurar o Pandas para exibir todas as linhas e colunas
+pd.set_option('display.max_rows', None)  # Exibir todas as linhas
+pd.set_option('display.max_columns', None)  # Exibir todas as colunas
+pd.set_option('display.width', None)  # Ajustar a largura da exibição
+pd.set_option('display.max_colwidth', None)  # Exibir o conteúdo completo de cada coluna
+
+# Exibir o DataFrame completo
+print(jogos_futuros)
+
+# Bloco 15
+# Verificar os valores únicos na coluna 'League' após normalização
+print("Valores únicos na coluna 'League' de jogos_futuros (após normalização):")
+print(jogos_futuros['League'].unique())
+
+# Verificar a lista paises_com_roi_positivo após normalização
+print("\nPaíses com ROI positivo (após normalização):")
+print(paises_com_roi_positivo)
+
+# Filtrar jogos futuros apenas para países com ROI positivo
+jogos_futuros_filtrados = jogos_futuros[jogos_futuros['League'].isin(paises_com_roi_positivo)]
+
+# Verificar se a filtragem retornou resultados
+if jogos_futuros_filtrados.empty:
+    print("\nNenhum jogo futuro encontrado para os países com ROI positivo.")
+else:
+    print("\nJogos futuros filtrados:")
+    print(jogos_futuros_filtrados)
+
+# Bloco 16
+print(jogos_futuros.to_string())
+
+# <h1> Previsões </h1>
+
+# Bloco 17
+# 1. Selecionar as features e as variáveis alvo
+features_selecionadas = [
+        'media_gols_ft_marcados_casa', 'media_gols_ft_sofridos_casa', 'media_gols_ft_marcados_fora', 'media_gols_ft_sofridos_fora', 
+        'forca_time_ft_casa', 'forca_time_ft_fora', 'desempenho_ft_casa', 'desempenho_ft_fora', 'confrontos_diretos_ft', 
+        'ppg_ft_home', 'ppg_ft_away', 'vantagem_temporal_casa', 'vantagem_temporal_fora', 'casa_gols_0_15', 'fora_gols_0_15', 
+        'casa_sofridos_0_15', 'fora_sofridos_0_15', 'casa_gols_16_30', 'fora_gols_16_30', 'casa_sofridos_16_30', 'fora_sofridos_16_30', 
+        'casa_gols_31_45', 'fora_gols_31_45', 'casa_sofridos_31_45', 'fora_sofridos_31_45', 'casa_gols_46_60', 'fora_gols_46_60', 
+        'casa_sofridos_46_60', 'fora_sofridos_46_60', 'casa_gols_61_75', 'fora_gols_61_75', 'casa_sofridos_61_75', 'fora_sofridos_61_75', 
+        'casa_gols_76_90', 'fora_gols_76_90', 'casa_sofridos_76_90', 'fora_sofridos_76_90', 'prob_home_ht', 'prob_away_ht', 
+        'prob_home_ft', 'prob_away_ft', 'prob_over_1_5_ht', 'prob_over_2_5_ft', 'entropia_gols_H', 'momentum_gols_H', 
+        'peso_temporal_gols_H', 'gols_rapidos_H', 'entropia_gols_A', 'momentum_gols_A', 'peso_temporal_gols_A', 'gols_rapidos_A', 
+        'delta_entropia_gols', 'delta_momentum_gols', 'delta_peso_temporal_gols', 'delta_gols_rapidos', 'soma_minutos_gols_H', 
+        'max_minuto_gols_H', 'min_minuto_gols_H', 'soma_minutos_gols_A', 'max_minuto_gols_A', 'min_minuto_gols_A', 
+        'interacao_momentum_gols', 'interacao_peso_temporal', 'interacao_entropia_momentum', 'taxa_gols_por_chutes_H', 
+        'taxa_gols_por_chutes_A', 'taxa_gols_por_chutes_totais_H', 'taxa_gols_por_chutes_totais_A', 'media_movel_over25_home', 'media_movel_over25_away', 
+        'media_movel_over15_ht_home', 'media_movel_over15_ht_away', 'relacao_odd_over25', 'relacao_odd_over15_ht', 'pressao_final_ht_H', 
+        'pressao_final_ht_A', 'media_gols_adversarios_home', 'media_gols_adversarios_away', 'prob_odd_over25_ft', 'prob_odd_over15_ht', 
+        'ajuste_prob_over25_ft_home', 'ajuste_prob_over15_ht_home'
+    ]
+
+# Bloco 18
+import pandas as pd
+import joblib
+import numpy as np
+
+# Função para fazer previsões nos jogos futuros
+def prever_jogos_futuros(jogos_futuros, paises_com_roi_positivo, features_selecionadas):
+    """
+    Faz previsões para os jogos futuros usando os modelos treinados.
+    
+    Parâmetros:
+        jogos_futuros (DataFrame): DataFrame contendo os jogos futuros.
+        paises_com_roi_positivo (list): Lista de países com ROI positivo.
+        features_selecionadas (list): Lista de features usadas para previsão.
+    
+    Retorna:
+        DataFrame: DataFrame com as previsões adicionadas.
+    """
+    # Verificar se há jogos futuros
+    if jogos_futuros.empty:
+        print("Nenhum jogo futuro encontrado.")
+        return pd.DataFrame()
+
+    # Normalizar os nomes das ligas
+    jogos_futuros['League'] = jogos_futuros['League'].str.strip().str.lower()
+    paises_com_roi_positivo = [pais.strip().lower() for pais in paises_com_roi_positivo]
+
+    # Filtrar jogos futuros apenas para países com ROI positivo
+    jogos_futuros_filtrados = jogos_futuros[jogos_futuros['League'].isin(paises_com_roi_positivo)]
+
+    if jogos_futuros_filtrados.empty:
+        print("Nenhum jogo futuro encontrado para os países com ROI positivo.")
+        return pd.DataFrame()
+
+    # DataFrame para armazenar as previsões
+    df_previsoes = pd.DataFrame(columns=['País', 'Tipo de Aposta', 'Jogo', 'Data', 'Previsão', 'Over', 'Under', 'GR', 'PL'])
+
+    # Iterar sobre cada jogo futuro
+    for index, row in jogos_futuros_filtrados.iterrows():
+        pais = row['League']
+        print(f"\nProcessando jogo: {row['Home']} vs {row['Away']} ({pais})")
+
+        # Carregar os modelos para o país específico
+        try:
+            modelo_over25 = joblib.load(f'modelo_over25_{pais}.joblib')
+            modelo_over15 = joblib.load(f'modelo_over15_{pais}.joblib')
+        except FileNotFoundError:
+            print(f"Modelos para {pais} não encontrados. Pulando este jogo.")
+            continue
+
+        # Preparar os dados para previsão
+        X_futuro = row[features_selecionadas].values.reshape(1, -1)  # Transformar a linha em array 2D
+
+        # Fazer previsões para Over 2.5 FT
+        previsao_over25 = modelo_over25.predict(X_futuro)[0]
+        resultado_over25 = "Over" if previsao_over25 == 1 else "Under"
+
+        # Fazer previsões para Over 1.5 HT
+        previsao_over15 = modelo_over15.predict(X_futuro)[0]
+        resultado_over15 = "Over" if previsao_over15 == 1 else "Under"
+
+        # Adicionar as previsões ao DataFrame
+        for tipo, resultado in [('Over25_FT', resultado_over25), ('Over15_HT', resultado_over15)]:
+            # Determinar as colunas de odds com base no tipo de aposta
+            if tipo == 'Over25_FT':
+                coluna_over = 'Odd_Over25_FT'
+                coluna_under = 'Odd_Under25_FT'
+            elif tipo == 'Over15_HT':
+                coluna_over = 'Odd_Over15_HT'
+                coluna_under = 'Odd_Under15_HT'
+            else:
+                raise ValueError(f"Tipo de aposta inválido: {tipo}")
+
+            # Verificar se as colunas existem no DataFrame
+            if coluna_over not in row or coluna_under not in row:
+                print(f"Aviso: Colunas de odds ({coluna_over}, {coluna_under}) não encontradas para o jogo {row['Home']} vs {row['Away']}. Pulando este jogo.")
+                continue
+
+            # Adicionar as previsões ao DataFrame
+            nova_previsao = pd.DataFrame({
+                'País': [pais],
+                'Tipo de Aposta': [tipo],
+                'Jogo': [f"{row['Home']} vs {row['Away']}"],
+                'Data': [row['Date']],
+                'Previsão': [resultado],
+                'Over': [row[coluna_over]],  # Usar a coluna correta para Over
+                'Under': [row[coluna_under]],  # Usar a coluna correta para Under
+                'GR': [np.nan],  # Coluna GR vazia para preenchimento manual
+                'PL': [np.nan]   # Coluna PL vazia para cálculo posterior
+            })
+            df_previsoes = pd.concat([df_previsoes, nova_previsao], ignore_index=True)
+
+        # Exibir as previsões
+        print(f"Previsão Over 2.5 FT: {resultado_over25}")
+        print(f"Previsão Over 1.5 HT: {resultado_over15}")
+
+    return df_previsoes
+
+# Fazer previsões para os jogos futuros
+df_previsoes = prever_jogos_futuros(jogos_futuros, paises_com_roi_positivo, features_selecionadas)
+
+# Exibir as previsões
+print("\nPrevisões para os jogos futuros:")
+print(df_previsoes)
+
+# Bloco 19
+from pathlib import Path
+from openpyxl import load_workbook
+
+# Nome do arquivo Excel
+nome_arquivo_excel = "previsoes_jogos_futuros_over_under.xlsx"
+
+# Verificar se o arquivo Excel já existe
+if Path(nome_arquivo_excel).exists():
+    # Carregar o arquivo Excel existente
+    df_existente = pd.read_excel(nome_arquivo_excel)
+    # Concatenar os dados existentes com as novas previsões
+    df_final = pd.concat([df_existente, df_previsoes], ignore_index=True)
+else:
+    # Se o arquivo não existir, criar um novo com as previsões atuais
+    df_final = df_previsoes
+
+# Salvar o DataFrame atualizado no Excel
+df_final.to_excel(nome_arquivo_excel, index=False)
+
+# Adicionar a fórmula para calcular o PL no Excel
+wb = load_workbook(nome_arquivo_excel)
+ws = wb.active
+
+# Adicionar a fórmula na coluna PL apenas para as novas linhas
+ultima_linha_existente = ws.max_row - len(df_previsoes)  # Linha inicial das novas previsões
+for row in range(ultima_linha_existente + 1, ws.max_row + 1):
+    # Fórmula: =SE(GR=1; SE(Previsão="Over"; Over-1; SE(Previsão="Under"; Under-1; 0)); -1)
+    formula = f'=IF(I{row}=1, IF(E{row}="Over", F{row}-1, IF(E{row}="Under", G{row}-1, 0)), -1)'
+    ws[f'J{row}'] = formula  # Coluna PL é a coluna J
+
+# Salvar o arquivo Excel com as fórmulas
+wb.save(nome_arquivo_excel)
+
+print(f"Previsões exportadas com sucesso para o arquivo: {nome_arquivo_excel}")
